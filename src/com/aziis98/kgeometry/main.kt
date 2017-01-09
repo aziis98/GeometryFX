@@ -1,5 +1,6 @@
 package com.aziis98.kgeometry
 
+import com.aziis98.kgeometry.rendering.RenderManager
 import javafx.animation.AnimationTimer
 import javafx.application.Application
 import javafx.fxml.FXML
@@ -26,33 +27,19 @@ import javafx.stage.Stage
 
 class KGeometry : Application() {
 
-    val at = object : AnimationTimer() {
-        override fun handle(now: Long) {
-            val gc = canvas.graphicsContext2D
-
-            gc.apply {
-                clearRect(0.0, 0.0, canvas.width, canvas.height)
-
-                space.render(this)
-            }
-        }
-    }
-
-    var lastMousePos = Point2D(0.0, 0.0)
+    val contextMenu: ContextMenu = createContextMenu(this)
     val canvas = Canvas(1000.0, 800.0).apply {
         addEventHandler(MouseEvent.MOUSE_CLICKED) {
             if (it.button == MouseButton.SECONDARY) {
-                lastMousePos = Point2D(it.x, it.y)
                 contextMenu.show(this, it.screenX, it.screenY)
             }
         }
     }
 
-    val space = GeometricSpace(canvas)
-    val contextMenu: ContextMenu = createContextMenu(this)
+    val manager = RenderManager(canvas)
 
     override fun start(primaryStage: Stage) {
-        at.start()
+
 
         primaryStage.title = "KGeometry"
         primaryStage.scene = Scene(Pane(canvas).apply {

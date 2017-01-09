@@ -11,12 +11,12 @@ fun createContextMenu(application: KGeometry): ContextMenu {
     return ContextMenu(
             MenuItem("Point").apply {
                 setOnAction {
-                    application.space.handle(CreatePoint(application.lastMousePos))
+//                    application.space.handle(CreatePoint(application.lastMousePos))
                 }
             },
             MenuItem("Circle").apply {
                 setOnAction {
-                    application.space.handle(CreateCircle(application.lastMousePos))
+//                    application.space.handle(CreateCircle(application.lastMousePos))
                 }
             }
     )

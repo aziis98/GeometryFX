@@ -3,7 +3,10 @@ package com.aziis98.kgeometry
 import javafx.beans.property.Property
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
+import javafx.beans.property.SimpleObjectProperty
+import javafx.geometry.Point2D
 import javafx.scene.canvas.GraphicsContext
+import javafx.scene.input.MouseEvent
 import kotlin.properties.Delegates
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -22,25 +25,29 @@ fun GraphicsContext.strokeCircle(x: Double, y: Double, radius: Double) =
 fun Number.map(srcFrom: Number, srcTo: Number, outFrom: Number, outTo: Number)
         = (this.toDouble() - srcFrom.toDouble()) / (srcTo.toDouble() - srcFrom.toDouble()) * (outTo.toDouble() - outFrom.toDouble()) + outFrom.toDouble()
 
-class DelegatedFXProperty<T>(val property: Property<T>) : ReadWriteProperty<Any?, T> {
-    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        return this.property.value
-    }
-
-    override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-        this.property.value = value
-    }
+operator fun SimpleBooleanProperty.getValue(thisRef: Any?, property: KProperty<*>): Boolean {
+    return get()
 }
 
-
-fun fx(doubleProperty: SimpleDoubleProperty): DelegatedFXProperty<Double> {
-    return DelegatedFXProperty(doubleProperty.asObject())
+operator fun SimpleBooleanProperty.setValue(thisRef: Any?, property: KProperty<*>, value: Boolean) {
+    set(value)
 }
 
-fun fx(booleanProperty: SimpleBooleanProperty): DelegatedFXProperty<Boolean> {
-    return DelegatedFXProperty(booleanProperty.asObject())
+operator fun SimpleDoubleProperty.getValue(thisRef: Any?, property: KProperty<*>): Double {
+    return get()
 }
 
-fun <T> fx(property: Property<T>): DelegatedFXProperty<T> {
-    return DelegatedFXProperty(property)
+operator fun SimpleDoubleProperty.setValue(thisRef: Any?, property: KProperty<*>, value: Double) {
+    set(value)
 }
+
+operator fun <T> SimpleObjectProperty<T>.getValue(thisRef: Any?, property: KProperty<*>): T {
+    return get()
+}
+
+operator fun <T> SimpleObjectProperty<T>.setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+    set(value)
+}
+
+val MouseEvent.position: Point2D
+    get() = Point2D(x, y)

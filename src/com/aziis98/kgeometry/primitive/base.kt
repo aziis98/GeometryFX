@@ -2,7 +2,7 @@ package com.aziis98.kgeometry.primitive
 
 import com.aziis98.kgeometry.GeometricSpace
 import com.aziis98.kgeometry.fillCircle
-import com.aziis98.kgeometry.fx
+import com.aziis98.kgeometry.*
 import com.aziis98.kgeometry.strokeCircle
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
@@ -17,43 +17,26 @@ import javafx.scene.transform.Affine
  */
 
 abstract class Primitive(val space: GeometricSpace) {
+    fun distance(point: Point2D) = distance(point.x, point.y)
 
-    val selectedProperty = SimpleBooleanProperty(false)
-    var selected by fx(selectedProperty)
-
-    abstract fun render(gc: GraphicsContext)
-
+    abstract fun distance(x: Double, y: Double): Double
 }
 
 class Point(space: GeometricSpace, val xProperty: SimpleDoubleProperty, val yProperty: SimpleDoubleProperty) : Primitive(space) {
 
     constructor(space: GeometricSpace, x: Double, y: Double) : this(space, SimpleDoubleProperty(x), SimpleDoubleProperty(y))
 
-    var x: Double by fx(xProperty)
-    var y: Double by fx(yProperty)
+    var x: Double by xProperty
+    var y: Double by yProperty
 
-    override fun render(gc: GraphicsContext) {
-        val screenPosition = space.affine.transform(x, y)
+    val position: Point2D
+        get() = Point2D(x, y)
 
-        gc.apply {
-
-            if (selected) {
-                fill = Color.ORANGE
-            }
-            else {
-                fill = Color.BLACK
-            }
-
-            fillCircle(screenPosition.x, screenPosition.y, 3.0)
-
-            if (space.mouseSpacePos.distance(x, y) < 5.0) {
-                lineWidth = 1.0
-                stroke = Color.RED
-                strokeCircle(screenPosition.x, screenPosition.y, 5.0)
-            }
-
-        }
+    override fun distance(x: Double, y: Double): Double {
+        return position.distance(x, y)
     }
+
+    override fun toString() = "Point($x, $y)"
 }
 
 /**
@@ -68,35 +51,14 @@ class Line(space: GeometricSpace,
 
     constructor(space: GeometricSpace, a: Double, b: Double, c: Double) : this(space, SimpleDoubleProperty(a), SimpleDoubleProperty(b), SimpleDoubleProperty(c))
 
-    var a by fx(aProperty)
-    var b by fx(bProperty)
-    var c by fx(cProperty)
+    var a by aProperty
+    var b by bProperty
+    var c by cProperty
 
-    override fun render(gc: GraphicsContext) {
-        gc.apply {
-            val spaceX1 = space.affine.inverseTransform(0.0, 0.0).x
-            val screenY1 = - (a * spaceX1 + c) / b
-
-            val spaceX2 = space.affine.inverseTransform(gc.canvas.width, 0.0).x
-            val screenY2 = - (a * spaceX2 + c) / b
-
-            if (selected) {
-                fill = Color.ORANGE
-            }
-            else {
-                fill = Color.BLACK
-            }
-
-            if (b != 0.0) {
-                assert(screenY1.isFinite() && screenY2.isFinite())
-                gc.strokeLine(0.0, screenY1, gc.canvas.width, screenY2)
-            }
-            else {
-                val screenX = -(c / a)
-                gc.strokeLine(screenX, 0.0, screenX, gc.canvas.height)
-            }
-        }
+    override fun distance(x: Double, y: Double): Double {
+        return Math.abs(a * x + b * y + c) / Math.sqrt(a * a + b * b)
     }
 
+    override fun toString() = "Line( ($a)x + ($b)y + ($c) = 0 )"
 }
 
