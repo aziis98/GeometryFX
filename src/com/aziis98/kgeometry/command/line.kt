@@ -34,12 +34,12 @@ class LineCommandHandler(manager: RenderManager) : CommandHandler(manager), ICli
                 if (pt != null) {
                     b = pt
                     state = 2
+
+                    line = manager.space.createLine(a, b)
+                    manager.space.primitives += line
+
+                    complete()
                 }
-
-                line = manager.space.createLine(a, b)
-                manager.space.primitives += line
-
-                complete()
             }
         }
     }

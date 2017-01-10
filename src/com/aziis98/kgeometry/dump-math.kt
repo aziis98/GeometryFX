@@ -10,6 +10,9 @@ import com.aziis98.kgeometry.primitive.Primitive
  */
 
 fun GeometricSpace.toMathString(): String {
+    val pointNames = mutableMapOf<Point, Int>()
+    val lineNames = mutableMapOf<Line, Int>()
+
     return primitives.mapIndexed { i, primitive -> primitive.toMathString(i) }.joinToString("\n\n")
 }
 
@@ -24,7 +27,7 @@ fun Primitive.toMathString(index: Int = 0): String {
             """
             line_$index through (x_$i1, y_$i1) and (x_$i2, y_$i2):
             ($a)x + ($b)y + ($c) = 0
-            """.trimMargin()
+            """.trimIndent()
         }
         is Line -> {
             "line_$index: ($a)x + ($b)y + ($c) = 0"
