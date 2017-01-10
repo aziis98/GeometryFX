@@ -44,7 +44,7 @@ class Point(space: GeometricSpace, val xProperty: SimpleDoubleProperty, val yPro
  * y = - (ax + c) / b
  * x = - (by + c) / a
  */
-class Line(space: GeometricSpace,
+open class Line(space: GeometricSpace,
            val aProperty: SimpleDoubleProperty,
            val bProperty: SimpleDoubleProperty,
            val cProperty: SimpleDoubleProperty) : Primitive(space) {
@@ -62,3 +62,22 @@ class Line(space: GeometricSpace,
     override fun toString() = "Line( ($a)x + ($b)y + ($c) = 0 )"
 }
 
+class Line2Point(space: GeometricSpace, val p1: Point, val p2: Point) :
+        Line(space, 0.0, 0.0, 0.0) {
+
+    init {
+        p1.xProperty.addListener { _, _, _ -> update() }
+        p1.yProperty.addListener { _, _, _ -> update() }
+        p2.xProperty.addListener { _, _, _ -> update() }
+        p2.yProperty.addListener { _, _, _ -> update() }
+
+        update()
+    }
+
+    private fun update() {
+        a = p1.y - p2.y
+        b = p2.x - p1.x
+        c = p1.x * p2.y - p2.x * p1.y
+    }
+
+}

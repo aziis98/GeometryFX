@@ -3,6 +3,7 @@ package com.aziis98.kgeometry.rendering
 import com.aziis98.kgeometry.ConsoleDialog
 import com.aziis98.kgeometry.GeometricSpace
 import com.aziis98.kgeometry.Worker
+import com.aziis98.kgeometry.command.CommandHandler
 import com.aziis98.kgeometry.command.ICommand
 import com.aziis98.kgeometry.command.IClickListener
 import com.aziis98.kgeometry.command.getNearest
@@ -71,7 +72,7 @@ class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Primitive> getRenderer(primitive: T) = renderers[primitive::class] as PrimitiveRenderer<T>?
+    fun <T : Primitive> getRenderer(primitive: T) = renderers.filter { it.key.isInstance(primitive) }.values.firstOrNull() as PrimitiveRenderer<T>?
 
     var draggingPoint: Point? = null
 
@@ -171,21 +172,18 @@ class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
 
         }
 
-        gc.fill = Color.BLACK
-        gc.fillText("nearest: $nearestMap", 10.0, 10.0)
-        gc.fillText("affine: $affine", 10.0, 30.0)
+//        gc.fill = Color.BLACK
+//        gc.fillText("nearest: $nearestMap", 10.0, 10.0)
+//        gc.fillText("affine: $affine", 10.0, 30.0)
     }
 
 
     private fun renderPrimitives(gc: GraphicsContext) {
         space.primitives.forEach {
-            val firstEntry = nearestMap.get().entries
-                    .map { if (it.key is Line) it.key to (it.value + 3.0) else it.toPair() }
-                    .sortedBy { it.second }
-                    .firstOrNull()
+            val firstEntry = nearestMap.get().entries.firstOrNull()
             val attributes = PrimitiveAttributes(
                     commandHandler == null && it in selected,
-                    it == firstEntry?.first && firstEntry.second < 7.0
+                    it == firstEntry?.key && firstEntry.value < 7.0
             )
             gc.save()
             getRenderer(it)?.render(gc, it, attributes) ?: error("No renderer for primitive: $it")
@@ -193,7 +191,7 @@ class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
         }
     }
 
-    fun handleCommand(commandHandler: com.aziis98.kgeometry.command.CommandHandler) {
+    fun handleCommand(commandHandler: CommandHandler) {
         this.commandHandler = commandHandler
     }
 }
@@ -203,8 +201,10 @@ class NearestMapWorker(val manager: RenderManager) : Worker<Point2D, LinkedHashM
         val mousePosition = input
 //        Thread.sleep(500)
 
+        // Points are scored more than other primitives
         return manager.space.primitives
-                .map { it to it.distance(manager.affine.inverseTransform(mousePosition)) }
+                .map { it to it.distance(manager.affine.inverseTransform(mousePosition)) }  // List<Pair<Primitive, *Score*>>
+                .map { if (it.first !is Point) it.first to it.second + 3.0 else it }        // Adjusting scores
                 .sortedBy { it.second }
                 .associateTo(LinkedHashMap()) { it }
     }

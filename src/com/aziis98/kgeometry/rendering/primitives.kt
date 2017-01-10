@@ -43,7 +43,7 @@ class PointRenderer(manager: RenderManager) : PrimitiveRenderer<Point>(Point::cl
     }
 }
 
-class LineRenderer(manager: RenderManager) : PrimitiveRenderer<Line>(Line::class, manager) {
+open class LineRenderer(manager: RenderManager) : PrimitiveRenderer<Line>(Line::class, manager) {
     override fun render(gc: GraphicsContext, primitive: Line, attributes: PrimitiveAttributes) {
         gc.apply {
             if (attributes.selected) {
