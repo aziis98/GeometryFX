@@ -91,20 +91,25 @@ class ConsoleDialog(val textField: TextField) {
                     theCallback = null
                     shown = false
                 }
+                if (it.code == KeyCode.ESCAPE) {
+                    shown = false
+                    theCallback = null
+                }
             }
         }
 
         shown = false
     }
 
-    fun inputText(callback: (String) -> Unit) {
-        println("[Showing the console]")
+    fun inputText(message: String = "", callback: (String) -> Unit) {
+//        println("[Showing the console]")
         if (!shown) {
             shown = true
             theCallback = callback
-            textField.requestFocus()
+            textField.text = message
             Platform.runLater {
-                textField.clear()
+                textField.requestFocus()
+                textField.positionCaret(textField.text.length)
             }
         }
     }

@@ -3,10 +3,7 @@ package com.aziis98.kgeometry.rendering
 import com.aziis98.kgeometry.ConsoleDialog
 import com.aziis98.kgeometry.GeometricSpace
 import com.aziis98.kgeometry.Worker
-import com.aziis98.kgeometry.command.CommandHandler
-import com.aziis98.kgeometry.command.ICommand
-import com.aziis98.kgeometry.command.IClickListener
-import com.aziis98.kgeometry.command.getNearest
+import com.aziis98.kgeometry.command.*
 import com.aziis98.kgeometry.position
 import com.aziis98.kgeometry.primitive.*
 import javafx.animation.AnimationTimer
@@ -21,6 +18,7 @@ import javafx.scene.transform.Affine
 import javafx.scene.transform.Scale
 import javafx.scene.transform.TransformChangedEvent
 import javafx.scene.transform.Translate
+import java.io.FileInputStream
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 
@@ -95,6 +93,8 @@ class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
         space.primitives += space.createPoint(0.0, 100.0)
 
         space.primitives += space.createLine(p1, p2)
+
+        Font.loadFont(javaClass.getResourceAsStream("assets/font/cutive-mono.ttf"), 14.0)
     }
 
 
@@ -147,9 +147,14 @@ class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
             }
         }
 
+        canvas.addEventHandler(KeyEvent.KEY_TYPED) {
+            if (it.character == ":") {
+                handleCommand(ConsoleCommandHandler(this, ":"))
+            }
+        }
         canvas.addEventHandler(KeyEvent.KEY_PRESSED) {
-            if (it.code == KeyCode.T) {
-                consoleDialog.inputText { println("console: $it") }
+            if (it.code == KeyCode.ESCAPE) {
+                commandHandler = null
             }
         }
     }

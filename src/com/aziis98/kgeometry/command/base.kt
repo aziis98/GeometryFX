@@ -26,9 +26,13 @@ abstract class CommandHandler(val manager: RenderManager) {
 
     open fun isSelectable(primitive: Primitive) = true
 
+    open var info: String? = ""
+
     open fun render(gc: GraphicsContext) {
-        gc.fill = Color.ORANGE
-        gc.fillText("Command: ${javaClass.canonicalName}", 10.0, gc.canvas.height - 50.0)
+        gc.fill = Color.BLUEVIOLET
+        info?.let {
+            gc.fillText("$info", 10.0, 10.0)
+        }
     }
 
     abstract fun finalize(): ICommand

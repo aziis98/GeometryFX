@@ -9,11 +9,11 @@ import com.aziis98.kgeometry.toMathString
 
 data class ConsoleCommand(val command: String) : ICommand
 
-class ConsoleCommandHandler(manager: RenderManager) : CommandHandler(manager) {
+class ConsoleCommandHandler(manager: RenderManager, commandPrefix: String = "") : CommandHandler(manager) {
     lateinit var command: String
 
     init {
-        manager.consoleDialog.inputText {
+        manager.consoleDialog.inputText(commandPrefix) {
             command = it
             runCommand()
             complete()
@@ -21,11 +21,16 @@ class ConsoleCommandHandler(manager: RenderManager) : CommandHandler(manager) {
     }
 
     fun runCommand() {
-        println("Command: $command")
+//        println("Command: \"$command\"")
 
         when {
             command.startsWith(":") -> when (command) {
                 ":dump-math" -> println(manager.space.toMathString())
+
+                ":point" -> manager.handleCommand(PointCommandHandler(manager))
+                ":line" -> manager.handleCommand(LineCommandHandler(manager))
+
+                else -> System.err.println("[Warning] Ignored unknown command: \"$command\"")
             }
         }
 
