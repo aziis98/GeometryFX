@@ -1,18 +1,19 @@
 package com.aziis98.kgeometry.rendering
 
+import com.aziis98.kgeometry.ConsoleDialog
 import com.aziis98.kgeometry.GeometricSpace
 import com.aziis98.kgeometry.Worker
+import com.aziis98.kgeometry.command.ICommand
+import com.aziis98.kgeometry.command.IClickListener
+import com.aziis98.kgeometry.command.getNearest
 import com.aziis98.kgeometry.position
-import com.aziis98.kgeometry.primitive.Point
-import com.aziis98.kgeometry.primitive.Primitive
-import com.aziis98.kgeometry.primitive.createPoint
+import com.aziis98.kgeometry.primitive.*
 import javafx.animation.AnimationTimer
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
-import javafx.scene.input.MouseEvent
-import javafx.scene.input.ScrollEvent
+import javafx.scene.input.*
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import javafx.scene.transform.Affine
@@ -26,7 +27,7 @@ import kotlin.reflect.KClass
  * Created by aziis98 on 09/01/2017.
  */
 
-class RenderManager(val canvas: Canvas) {
+class RenderManager(val canvas: Canvas, val consoleDialog: ConsoleDialog) {
 
     val space = GeometricSpace()
     val renderers = mutableMapOf<KClass<out Primitive>, PrimitiveRenderer<out Primitive>>()
@@ -34,20 +35,23 @@ class RenderManager(val canvas: Canvas) {
     val selected = mutableSetOf<Primitive>()
     val nearestMap = NearestMapWorker(this)
 
+    var commandHandler: com.aziis98.kgeometry.command.CommandHandler? = null
+    val commands = mutableListOf<ICommand>()
+
     fun registerRenderer(primitiveRenderer: PrimitiveRenderer<*>) {
         renderers.put(primitiveRenderer.primitiveClass, primitiveRenderer)
     }
 
     val translation = Translate(0.0, 0.0)
-    val scale = Scale(1.0, 1.0)
+    val scale = Scale(1.0, 1.0, 0.0, 0.0)
     val zoom = SimpleDoubleProperty(1.0)
 
     val affine = Affine().apply {
         val listener: () -> Unit = {
             setToIdentity()
             appendTranslation(canvas.width / 2, canvas.height / 2)
-            append(translation)
             append(scale)
+            append(translation)
         }
 
         translation.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED) { listener() }
@@ -62,21 +66,34 @@ class RenderManager(val canvas: Canvas) {
         // init
         setToIdentity()
         appendTranslation(canvas.width / 2, canvas.height / 2)
-        append(translation)
         append(scale)
+        append(translation)
     }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Primitive> getRenderer(primitive: T) = renderers[primitive::class] as PrimitiveRenderer<T>?
 
+    var draggingPoint: Point? = null
 
     init {
         registerRenderers()
         setupCanvas()
 
-        space.primitives += space.createPoint(0.0, 0.0)
-        space.primitives += space.createPoint(100.0, 0.0)
+        canvas.addEventHandler(MouseEvent.MOUSE_PRESSED) {
+            draggingPoint = getNearest<Point>()
+        }
+        canvas.addEventHandler(MouseEvent.MOUSE_RELEASED) {
+            draggingPoint = null
+        }
+
+        val p1 = space.createPoint(0.0, 0.0)
+        val p2 = space.createPoint(100.0, 0.0)
+
+        space.primitives += p1
+        space.primitives += p2
         space.primitives += space.createPoint(0.0, 100.0)
+
+        space.primitives += space.createLine(p1, p2)
     }
 
 
@@ -97,8 +114,16 @@ class RenderManager(val canvas: Canvas) {
         canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED) { e ->
             nearestMap.push(Point2D(e.x, e.y))
 
-            translation.x += e.x - (mousePrevPos?.x ?: e.x)
-            translation.y += e.y - (mousePrevPos?.y ?: e.y)
+            if (draggingPoint != null) {
+                draggingPoint?.let {
+                    it.x += (e.x - (mousePrevPos?.x ?: e.x)) / zoom.get()
+                    it.y += (e.y - (mousePrevPos?.y ?: e.y)) / zoom.get()
+                }
+            }
+            else {
+                translation.x += (e.x - (mousePrevPos?.x ?: e.x)) / zoom.get()
+                translation.y += (e.y - (mousePrevPos?.y ?: e.y)) / zoom.get()
+            }
 
             mousePrevPos = e.position
         }
@@ -108,15 +133,44 @@ class RenderManager(val canvas: Canvas) {
             zoom.set(zoom.get() + it.deltaY * zoomSpeed)
             zoom.set(zoom.get().coerceIn(0.1, 10.0))
         }
+
+        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED) { e ->
+            val handler = commandHandler
+            if (e.button == MouseButton.PRIMARY && handler != null) {
+                if (handler is IClickListener)
+                    handler.mouseClick(affine.inverseTransform(e.position))
+            }
+
+            if (e.button == MouseButton.SECONDARY) {
+                println("ContextMenu!")
+            }
+        }
+
+        canvas.addEventHandler(KeyEvent.KEY_PRESSED) {
+            if (it.code == KeyCode.T) {
+                consoleDialog.inputText { println("console: $it") }
+            }
+        }
     }
 
 
     fun render(gc: GraphicsContext) {
+        gc.font = Font.font("Cutive Mono", 14.0)
         gc.clearRect(0.0, 0.0, canvas.width, canvas.height)
 
         renderPrimitives(gc)
 
-        gc.font = Font.font("Cutive Mono", 14.0)
+        commandHandler?.let {
+
+            it.render(gc)
+
+            if (it.completed) {
+                commands += it.finalize()
+                commandHandler = null
+            }
+
+        }
+
         gc.fill = Color.BLACK
         gc.fillText("nearest: $nearestMap", 10.0, 10.0)
         gc.fillText("affine: $affine", 10.0, 30.0)
@@ -125,15 +179,27 @@ class RenderManager(val canvas: Canvas) {
 
     private fun renderPrimitives(gc: GraphicsContext) {
         space.primitives.forEach {
-            val firstEntry = nearestMap.get().entries.firstOrNull()
-            val attributes = PrimitiveAttributes(it in selected, it == firstEntry?.key && firstEntry.value < 7.0)
+            val firstEntry = nearestMap.get().entries
+                    .map { if (it.key is Line) it.key to (it.value + 3.0) else it.toPair() }
+                    .sortedBy { it.second }
+                    .firstOrNull()
+            val attributes = PrimitiveAttributes(
+                    commandHandler == null && it in selected,
+                    it == firstEntry?.first && firstEntry.second < 7.0
+            )
+            gc.save()
             getRenderer(it)?.render(gc, it, attributes) ?: error("No renderer for primitive: $it")
+            gc.restore()
         }
+    }
+
+    fun handleCommand(commandHandler: com.aziis98.kgeometry.command.CommandHandler) {
+        this.commandHandler = commandHandler
     }
 }
 
-class NearestMapWorker(val manager: RenderManager) : Worker<Point2D, Map<Primitive, Double>>(mapOf()) {
-    override fun work(input: Point2D): Map<Primitive, Double> {
+class NearestMapWorker(val manager: RenderManager) : Worker<Point2D, LinkedHashMap<Primitive, Double>>(LinkedHashMap()) {
+    override fun work(input: Point2D): LinkedHashMap<Primitive, Double> {
         val mousePosition = input
 //        Thread.sleep(500)
 
@@ -143,9 +209,7 @@ class NearestMapWorker(val manager: RenderManager) : Worker<Point2D, Map<Primiti
                 .associateTo(LinkedHashMap()) { it }
     }
 
-    override fun toString(): String {
-        return get().mapValues { it.value.toInt() }.toString()
-    }
+    override fun toString() = get().mapValues { it.value.toInt() }.toString()
 }
 
 // Init stuff

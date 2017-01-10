@@ -1,5 +1,8 @@
 package com.aziis98.kgeometry
 
+import com.aziis98.kgeometry.command.LineCommandHandler
+import com.aziis98.kgeometry.command.PointCommandHandler
+import com.aziis98.kgeometry.rendering.RenderManager
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.MenuItem
 
@@ -7,16 +10,17 @@ import javafx.scene.control.MenuItem
  * Created by aziis98 on 06/01/2017.
  */
 
-fun createContextMenu(application: KGeometry): ContextMenu {
+fun
+        createContextMenu(manager: RenderManager): ContextMenu {
     return ContextMenu(
             MenuItem("Point").apply {
                 setOnAction {
-//                    application.space.handle(CreatePoint(application.lastMousePos))
+                    manager.handleCommand(PointCommandHandler(manager))
                 }
             },
-            MenuItem("Circle").apply {
+            MenuItem("Line").apply {
                 setOnAction {
-//                    application.space.handle(CreateCircle(application.lastMousePos))
+                    manager.handleCommand(LineCommandHandler(manager))
                 }
             }
     )

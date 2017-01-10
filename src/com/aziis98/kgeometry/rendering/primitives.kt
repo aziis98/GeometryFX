@@ -45,28 +45,36 @@ class PointRenderer(manager: RenderManager) : PrimitiveRenderer<Point>(Point::cl
 
 class LineRenderer(manager: RenderManager) : PrimitiveRenderer<Line>(Line::class, manager) {
     override fun render(gc: GraphicsContext, primitive: Line, attributes: PrimitiveAttributes) {
-//        gc.apply {
-//            val spaceX1 = space.affine.inverseTransform(0.0, 0.0).x
-//            val screenY1 = - (a * spaceX1 + c) / b
-//
-//            val spaceX2 = space.affine.inverseTransform(gc.canvas.width, 0.0).x
-//            val screenY2 = - (a * spaceX2 + c) / b
-//
-//            if (attributes.selected) {
-//                fill = Color.ORANGE
-//            }
-//            else {
-//                fill = Color.BLACK
-//            }
-//
-//            if (b != 0.0) {
-//                assert(screenY1.isFinite() && screenY2.isFinite())
-//                gc.strokeLine(0.0, screenY1, gc.canvas.width, screenY2)
-//            }
-//            else {
-//                val screenX = -(c / a)
-//                gc.strokeLine(screenX, 0.0, screenX, gc.canvas.height)
-//            }
-//        }
+        gc.apply {
+            if (attributes.selected) {
+                stroke = Color.ORANGE
+            }
+            else if (attributes.hovered) {
+                stroke = Color.GRAY
+            }
+            else {
+                stroke = Color.BLACK
+            }
+
+
+            if (primitive.b != 0.0) {
+                val spaceX1 = manager.affine.inverseTransform(0.0, 0.0).x
+                val spaceY1 = - (primitive.a * spaceX1 + primitive.c) / primitive.b
+
+                val spaceX2 = manager.affine.inverseTransform(gc.canvas.width, gc.canvas.height).x
+                val spaceY2 = - (primitive.a * spaceX2 + primitive.c) / primitive.b
+
+                val screen1 = manager.affine.transform(spaceX1, spaceY1)
+                val screen2 = manager.affine.transform(spaceX2, spaceY2)
+
+                gc.strokeLine(screen1.x, screen1.y, screen2.x, screen2.y)
+            }
+            else {
+                val spaceX = -(primitive.c / primitive.a)
+                val screenX = manager.affine.transform(spaceX, 0.0).x
+
+                gc.strokeLine(screenX, 0.0, screenX, gc.canvas.height)
+            }
+        }
     }
 }
